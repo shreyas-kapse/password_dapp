@@ -1,6 +1,7 @@
 const express = require("express");
 const bodyParser = require("body-parser");
 const { MongoClient } = require("mongodb");
+const bcrypt = require("bcrypt");
 const port = 8080;
 const uri =
   "mongodb+srv://adminritz:9NUFiq51bQzUDzWy@cluster0.louh2fc.mongodb.net/?retryWrites=true&w=majority";
@@ -30,13 +31,18 @@ const collection = client.db("creds").collection("cred_coll");
 
 async function insertDocument(document) {
   try {
-    const result = await collection.insertOne(document);
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash(document.password, salt);
+    const result = await collection.insertOne({
+      username: document.username,
+      email: document.email,
+      password: hashedPassword,
+    });
     console.log(`Inserted document with _id: ${result.insertedId}`);
   } catch (err) {
     console.error(err);
   }
 }
-
 
 app.use(express.static("assets"));
 
@@ -51,6 +57,7 @@ app.get("/login", function (req, res) {
     }
   });
 });
+
 app.get("/signup", function (req, res) {
   const fileName = "signup.html";
   const filePath = __dirname + "/" + fileName;
@@ -74,36 +81,21 @@ app.post("/login-check", async (req, res) => {
   const username = req.body.username;
   const password = req.body.password;
   try {
-    const result = await collection.findOne({ username, password });
+    const result = await collection.findOne({ username });
     if (result) {
-      res.send("Login successful!");
-    }
-    else{
-      const user = await collection.findOne({ username });
-      if(user){
+      const isMatch = await bcrypt.compare(password, result.password);
+      if (isMatch) {
+        res.send("Login successful!");
+      } else {
         res.send("Wrong password!");
       }
-      else{
-        res.send("User not found!");
-      }
+    } else {
+      res.send("User not found!");
     }
   } catch (err) {
     console.error(err);
   }
 });
-
-// app.post('/login', (req, res) => {
-//     const { id, password } = req.body;
-
-//     // perform login validation
-//     // ...
-
-//     res.send('Login successful!');
-//   });
-
-// app.listen(port, function () {
-//     console.log('Server started on port' + port);
-// });
 
 connect()
   .then(() => {
