@@ -14,8 +14,16 @@ app.get('/login', function (req, res) {
             console.log('File sent successfully');
         }
     });
-    // res.send("Hello");
 });
+
+app.post('/login', (req, res) => {
+    const { id, password } = req.body;
+  
+    // perform login validation
+    // ...
+  
+    res.send('Login successful!');
+  });
 
 app.listen(port, function () {
     console.log('Server started on port' + port);
